@@ -1,6 +1,6 @@
 model:
 
-  init_weights: null
+  init_weights: /content/QuartzNet5x5-CTC/data/q5x5_ru_stride_4_crowd_epoch_4_step_9794.ckpt
   enc_filters: 1024
   labels: [ " ", "а", "б", "в", "г", "д", "е", "ж", "з", "и", "й", "к", "л", "м", "н", "о", "п", "р", "с", "т", "у", "ф", "х", "ц", "ч", "ш", "щ", "ъ", "ы", "ь", "э", "ю", "я" ]
 
@@ -129,13 +129,13 @@ val_dataloader:
       ${train_dataloader.dataset.transforms}
 
 trainer:
-  resume_from_checkpoint: null
+  resume_from_checkpoint: /content/QuartzNet5x5-CTC/data/q5x5_ru_stride_4_crowd_epoch_4_step_9794.ckpt
   val_check_interval: 1.0
-  check_val_every_n_epoch: 2
+  check_val_every_n_epoch: 1
   log_every_n_steps: 5
   precision: 32
   accumulate_grad_batches: 1
   gradient_clip_val: 1.0
   accelerator: auto
-  max_steps: 300
+  max_steps: 12000
   devices: 1
