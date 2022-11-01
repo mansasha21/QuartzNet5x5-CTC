@@ -1,5 +1,3 @@
-from typing import List
-
 import torch
 from torch import nn
 
@@ -19,15 +17,49 @@ class QuartzNetBlock(torch.nn.Module):
     ):
 
         super().__init__()
+        if dilation > 1:
+            padding = (dilation * kernel_size) // 2 - 1
+        else:
+            padding = kernel_size // 2
 
-        self.res = None
+        if residual:
+            self.res = nn.Sequential(
+                nn.Conv1d(feat_in, filters, kernel_size=1), nn.BatchNorm1d(filters),
+            )
 
-        self.conv = None
+        layers = nn.ModuleList()
+        for _ in range(repeat):
+            if separable:
+                layers.append(
+                    nn.Conv1d(
+                        feat_in,
+                        feat_in,
+                        kernel_size,
+                        stride=stride,
+                        dilation=dilation,
+                        groups=feat_in,
+                        padding=padding,
+                    )
+                )
+                layers.append(nn.Conv1d(feat_in, filters, kernel_size=1))
+            else:
+                layers.append(nn.Conv1d(feat_in, filters, kernel_size))
+            feat_in = filters
 
-        self.out = None
+            layers.append(nn.BatchNorm1d(filters))
+            layers.append(nn.ReLU())
+            layers.append(nn.Dropout(dropout))
+
+        self.residual = residual
+        self.conv = nn.Sequential(*layers[:-2])
+        self.out = nn.Sequential(*layers[-2:])
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
-        return x
+        if self.residual:
+            x = self.res(x) + self.conv(x)
+        else:
+            x = self.conv(x)
+        return self.out(x)
 
 
 class QuartzNet(nn.Module):
@@ -40,7 +72,7 @@ class QuartzNet(nn.Module):
         feat_in = conf.feat_in
         for block in conf.blocks:
             layers.append(QuartzNetBlock(feat_in, **block))
-            self.stride_val *= block.stride**block.repeat
+            self.stride_val *= block.stride ** block.repeat
             feat_in = block.filters
 
         self.layers = nn.Sequential(*layers)
